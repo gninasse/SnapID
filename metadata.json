@@ -1,0 +1,6 @@
+{
+  "name": "ID Photo Maker",
+  "description": "Prenez des photos d'identité conformes aux normes administratives avec guidage intelligent.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
