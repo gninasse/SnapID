@@ -244,12 +244,20 @@ fun ExportScreen(
                             )
                             Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                text = if (isSavedSuccessfully) "Sauvegardé avec succès !" else "Enregistrer la planche (Galerie)",
+                                text = if (isSavedSuccessfully) "Sauvegardé avec succès !" else "Tout enregistrer dans la Galerie",
                                 fontSize = 14.sp,
                                 fontWeight = FontWeight.Bold
                             )
                         }
                     }
+
+                    Text(
+                        text = "Enregistre la photo d'identité individuelle ET la planche de 6 photos dans votre galerie de photos.",
+                        fontSize = 11.sp,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp)
+                    )
 
                     // Divider
                     HorizontalDivider(

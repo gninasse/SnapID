@@ -412,8 +412,28 @@ private fun captureAndProcess(
                 val savedUri = outputFileResults.savedUri ?: Uri.fromFile(photoFile)
                 val bitmap = BitmapFactory.decodeFile(photoFile.absolutePath)
                 if (bitmap != null) {
-                    // Correct potential camera front mirroring or orientation issues
+                    // Read EXIF orientation to correct physical sensor rotations
+                    val exifInterface = try {
+                        android.media.ExifInterface(photoFile.absolutePath)
+                    } catch (e: Exception) {
+                        null
+                    }
+                    val orientation = exifInterface?.getAttributeInt(
+                        android.media.ExifInterface.TAG_ORIENTATION,
+                        android.media.ExifInterface.ORIENTATION_NORMAL
+                    ) ?: android.media.ExifInterface.ORIENTATION_NORMAL
+
+                    val rotationDegrees = when (orientation) {
+                        android.media.ExifInterface.ORIENTATION_ROTATE_90 -> 90
+                        android.media.ExifInterface.ORIENTATION_ROTATE_180 -> 180
+                        android.media.ExifInterface.ORIENTATION_ROTATE_270 -> 270
+                        else -> 0
+                    }
+
                     val matrix = Matrix()
+                    if (rotationDegrees != 0) {
+                        matrix.postRotate(rotationDegrees.toFloat())
+                    }
                     if (viewModel.isFrontCamera.value) {
                         // Mirror horizontally for natural selfie view
                         matrix.postScale(-1f, 1f)
@@ -421,6 +441,9 @@ private fun captureAndProcess(
                     val correctedBitmap = Bitmap.createBitmap(
                         bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true
                     )
+                    if (correctedBitmap != bitmap) {
+                        bitmap.recycle()
+                    }
                     
                     viewModel.setCapturedBitmap(correctedBitmap)
                 } else {

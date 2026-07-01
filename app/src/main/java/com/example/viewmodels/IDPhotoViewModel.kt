@@ -260,6 +260,9 @@ class IDPhotoViewModel : ViewModel() {
                 // 4. Save sheet to Public Gallery so the user can easily print/share it from Google Photos
                 ImageProcessor.saveBitmapToGallery(context, sheet, "Planche_Photo_Identite_${docType.name}")
 
+                // 4b. Also save the single cropped ID photo to the public Gallery!
+                ImageProcessor.saveBitmapToGallery(context, cropped, "Photo_Identite_Unique_${docType.name}")
+
                 // 5. Add to SharedPreferences history
                 val newPhoto = IdPhoto(
                     id = id,
@@ -276,7 +279,7 @@ class IDPhotoViewModel : ViewModel() {
 
                 withContext(Dispatchers.Main) {
                     _isLoading.value = false
-                    _statusMessage.value = "Photo sauvegardée avec succès ! Retrouvez la planche dans votre Galerie."
+                    _statusMessage.value = "Photos sauvegardées ! Retrouvez la photo unique ET la planche dans votre Galerie."
                     onComplete()
                 }
             } catch (e: Exception) {
