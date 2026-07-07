@@ -44,6 +44,8 @@ object ImageProcessor {
      * @param offsetXPercent The horizontal offset as a fraction (-0.5f to 0.5f) of the template width.
      * @param offsetYPercent The vertical offset as a fraction (-0.5f to 0.5f) of the template height.
      * @param rotationDegrees The user's custom rotation (0, 90, 180, 270).
+     * @param viewportWidth The actual width of the viewport/container box on the screen.
+     * @param viewportHeight The actual height of the viewport/container box on the screen.
      */
     fun createCroppedIdPhoto(
         originalBitmap: Bitmap,
@@ -51,7 +53,9 @@ object ImageProcessor {
         scale: Float,
         offsetXPercent: Float,
         offsetYPercent: Float,
-        rotationDegrees: Float
+        rotationDegrees: Float,
+        viewportWidth: Float,
+        viewportHeight: Float
     ): Bitmap {
         // Define high-res output resolution
         // Standard EU passport: 35mm x 45mm. Let's output at 300 DPI:
@@ -64,45 +68,55 @@ object ImageProcessor {
         val output = Bitmap.createBitmap(targetWidth, targetHeight, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(output)
         
-        // Fill background with light gray (or white as fallback/requirement)
+        // Fill background with white
         canvas.drawColor(Color.WHITE)
 
         // First apply user rotation to the original bitmap
         val rotatedSource = rotateBitmap(originalBitmap, rotationDegrees)
+        val I_w = rotatedSource.width.toFloat()
+        val I_h = rotatedSource.height.toFloat()
 
-        // We want to draw rotatedSource onto the target canvas.
-        // We will fit the rotatedSource into the target template, and then apply user translations and scale.
-        val srcW = rotatedSource.width.toFloat()
-        val srcH = rotatedSource.height.toFloat()
-        
-        val dstW = targetWidth.toFloat()
-        val dstH = targetHeight.toFloat()
+        // Fallback if viewport sizes are not loaded
+        val V_w = if (viewportWidth <= 0f) I_w else viewportWidth
+        val V_h = if (viewportHeight <= 0f) I_h else viewportHeight
 
-        // Calculate scale to fit the image inside the crop target area initially (centerCrop)
-        val initialScale = Math.max(dstW / srcW, dstH / srcH)
-        val fitW = srcW * initialScale
-        val fitH = srcH * initialScale
+        // Calculate crop box dimensions on screen (matching IdPhotoOverlay exactly)
+        val marginPercent = 0.12f
+        val targetRatio = docType.aspectRatio
+        val currentRatio = V_w / V_h
 
-        // Center position initially
-        val startX = (dstW - fitW) / 2f
-        val startY = (dstH - fitH) / 2f
+        val C_w: Float
+        val C_h: Float
+        if (currentRatio > targetRatio) {
+            // Screen is wider than target ratio: limit by height
+            C_h = V_h * (1f - 2 * marginPercent)
+            C_w = C_h * targetRatio
+        } else {
+            // Screen is taller than target ratio: limit by width
+            C_w = V_w * (1f - 2 * marginPercent)
+            C_h = C_w / targetRatio
+        }
+
+        // Calculate fitScale of rotatedSource inside viewport (ContentScale.Fit)
+        val fitScale = Math.min(V_w / I_w, V_h / I_h)
+
+        // Actual translations applied in pixels relative to viewport
+        val translationX = offsetXPercent * V_w
+        val translationY = offsetYPercent * V_h
+
+        // Map crop box corners to the rotated original image coordinates
+        // Using coordinate space mapping:
+        val left_img = I_w / 2f + (-C_w / 2f - translationX) / (fitScale * scale)
+        val top_img = I_h / 2f + (-C_h / 2f - translationY) / (fitScale * scale)
+        val right_img = I_w / 2f + (C_w / 2f - translationX) / (fitScale * scale)
+        val bottom_img = I_h / 2f + (C_h / 2f - translationY) / (fitScale * scale)
+
+        // Robust map of source rect to destination rect
+        val srcRect = RectF(left_img, top_img, right_img, bottom_img)
+        val dstRect = RectF(0f, 0f, targetWidth.toFloat(), targetHeight.toFloat())
 
         val matrix = Matrix()
-        
-        // 1. Initial fit and center crop translation
-        matrix.postTranslate(-srcW / 2f, -srcH / 2f)
-        matrix.postScale(initialScale, initialScale)
-        matrix.postTranslate(dstW / 2f, dstH / 2f)
-
-        // 2. Apply user-controlled zoom (centered)
-        matrix.postTranslate(-dstW / 2f, -dstH / 2f)
-        matrix.postScale(scale, scale)
-        matrix.postTranslate(dstW / 2f, dstH / 2f)
-
-        // 3. Apply user-controlled translations (scaled relative to target size)
-        val actualTranslationX = offsetXPercent * dstW
-        val actualTranslationY = offsetYPercent * dstH
-        matrix.postTranslate(actualTranslationX, actualTranslationY)
+        matrix.setRectToRect(srcRect, dstRect, Matrix.ScaleToFit.FILL)
 
         val paint = Paint().apply {
             isAntiAlias = true

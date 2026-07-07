@@ -197,20 +197,24 @@ class IDPhotoViewModel : ViewModel() {
      * Processes the current original image with the user's edits, crops it,
      * generates the photo sheet, and opens the Export screen.
      */
-    fun confirmEditsAndGenerate(context: Context) {
+    fun confirmEditsAndGenerate(
+        context: Context,
+        scale: Float,
+        offsetXPercent: Float,
+        offsetYPercent: Float,
+        rotationDegrees: Float,
+        viewportWidth: Float,
+        viewportHeight: Float
+    ) {
         val original = _originalCapturedBitmap.value ?: return
         val docType = _selectedDocType.value
-        val scale = _editScale.value
-        val offsetX = _editOffsetX.value
-        val offsetY = _editOffsetY.value
-        val rotation = _editRotation.value
 
         _isLoading.value = true
         viewModelScope.launch(Dispatchers.Default) {
             try {
                 // 1. Create cropped high-res photo
                 val cropped = ImageProcessor.createCroppedIdPhoto(
-                    original, docType, scale, offsetX, offsetY, rotation
+                    original, docType, scale, offsetXPercent, offsetYPercent, rotationDegrees, viewportWidth, viewportHeight
                 )
 
                 // 2. Create the 6-photo printing sheet

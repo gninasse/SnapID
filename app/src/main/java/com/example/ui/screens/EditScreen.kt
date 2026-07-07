@@ -23,6 +23,7 @@ import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
@@ -51,6 +52,9 @@ fun EditScreen(
     var offsetXPercent by remember { mutableStateOf(0f) }
     var offsetYPercent by remember { mutableStateOf(0f) }
     var rotationDegrees by remember { mutableStateOf(0f) }
+
+    var viewportWidth by remember { mutableStateOf(0f) }
+    var viewportHeight by remember { mutableStateOf(0f) }
 
     // Sync back to ViewModel before trigger
     LaunchedEffect(scale, offsetXPercent, offsetYPercent, rotationDegrees) {
@@ -96,6 +100,10 @@ fun EditScreen(
                     .fillMaxWidth()
                     .weight(1f)
                     .background(Color.Black)
+                    .onSizeChanged { size ->
+                        viewportWidth = size.width.toFloat()
+                        viewportHeight = size.height.toFloat()
+                    }
                     .pointerInput(Unit) {
                         detectDragGestures { change, dragAmount ->
                             change.consume()
@@ -300,7 +308,15 @@ fun EditScreen(
                         // Valider (ElectricBlue600)
                         Button(
                             onClick = { 
-                                viewModel.confirmEditsAndGenerate(context) 
+                                viewModel.confirmEditsAndGenerate(
+                                    context = context,
+                                    scale = scale,
+                                    offsetXPercent = offsetXPercent,
+                                    offsetYPercent = offsetYPercent,
+                                    rotationDegrees = rotationDegrees,
+                                    viewportWidth = viewportWidth,
+                                    viewportHeight = viewportHeight
+                                ) 
                             },
                             modifier = Modifier
                                 .weight(0.8f)
